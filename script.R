@@ -182,6 +182,7 @@ plot.all <-function(df, period=10)
 	
 	# Build the segment data frame for all in the df.interest
 	df.seg = data.frame(rx=NULL,rxend=NULL,ry=NULL,ryend=NULL)
+	rects = vector()
 	for ( j in 1:ninterest ) {
 		entry = df.interest[j,]
 		print(entry)
@@ -193,7 +194,8 @@ plot.all <-function(df, period=10)
 		syend = floor(entry$Logical_tail / frame.length)
 		print( c("sx, sxend, sy, syend", sx, sxend, sy, syend) )		
 
-		for (yi in sy:syend) {
+		# the starting and ending segments
+		for ( yi in c(sy,syend) ) {
 		  ry = yi
 		  ryend = yi
 		  
@@ -208,11 +210,20 @@ plot.all <-function(df, period=10)
 		  }
 		  df.seg = rbind(df.seg, c(rx,rxend,ry,ryend))
 		}
+		
+		# the segments in the middle
+		if ( syend - sy > 1 ) {
+			p.middle = geom_rect(data=NULL, xmin = 0, xmax = frame.length, ymin = sy+1, ymax = syend-1)
+			rects = append(rects, p.middle)
+		} else {
+			p.middle = NULL
+		}
 	}
 	names(df.seg) = c("rx","rxend","ry","ryend")
 	p.frame <- ggplot(data=df.seg, aes()) + ylim(c(0, frame.length)) + xlim(c(0, frame.length))  + 
-			geom_segment(aes(x=rx, y=ry, xend=rxend, yend=ryend))
-	print(p.frame)	
+			geom_segment(aes(x=rx, y=ry, xend=rxend, yend=ryend)) + rects
+	#print(p.frame)	
+	#Sys.sleep(1)
 	
 	###############################
 	
@@ -255,7 +266,7 @@ plot.all <-function(df, period=10)
 	p.rankdesity <- ggplot(data=df.interest, aes(x=factor(ORG.PID))) +
 	     geom_histogram( aes(y=..count..), binwidth=1 ) +  scale_y_continuous(limits=c(0,10)) + 
 		 scale_x_discrete(limits=1:100, labels=element_blank(), breaks = element_blank() )
-	#grid.arrange(p.perf, p.rankdesity, ncol=1)	
+	grid.arrange(p.frame, p.perf, p.rankdesity, ncol=1)	
   }
 }
 plot.all(df)
