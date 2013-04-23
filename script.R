@@ -174,6 +174,53 @@ plot.all <-function(df, period=10)
 	df.interest = df[pre:cur,]
 	ninterest = nrow(df.interest)
 	
+	###################################
+	fend = max(df$Logical_tail, na.rm=T)
+	frame.length = ceiling(sqrt(fend))
+	  
+
+	
+	# Build the segment data frame for all in the df.interest
+	df.seg = data.frame(rx=NULL,rxend=NULL,ry=NULL,ryend=NULL)
+	for ( j in 1:ninterest ) {
+		entry = df.interest[j,]
+		print(entry)
+		# sx: segment x
+		# rx: row x
+		sx = entry$Logical_offset %% frame.length
+		sxend = entry$Logical_tail %% frame.length
+		sy = floor(entry$Logical_offset / frame.length)
+		syend = floor(entry$Logical_tail / frame.length)
+		print( c("sx, sxend, sy, syend", sx, sxend, sy, syend) )		
+
+		for (yi in sy:syend) {
+		  ry = yi
+		  ryend = yi
+		  
+		  rx = 0
+		  rxend = frame.length
+		  if ( yi == sy ) {
+			# The starting row
+			rx = sx
+		  } else if (yi == syend) {
+			# The ending row
+			rxend = sxend        
+		  }
+		  df.seg = rbind(df.seg, c(rx,rxend,ry,ryend))
+		}
+	}
+	names(df.seg) = c("rx","rxend","ry","ryend")
+	p.frame <- ggplot(data=df.seg, aes()) + ylim(c(0, frame.length)) + xlim(c(0, frame.length))  + 
+			geom_segment(aes(x=rx, y=ry, xend=rxend, yend=ryend))
+	print(p.frame)	
+	
+	###############################
+	
+	
+	
+	
+	
+	
 	# Get bandwith and IOPS
     mymax = max(df.interest$End_timestamp, df.interest$Begin_timestamp, na.rm=T)
 	mymin = min(df.interest$End_timestamp, df.interest$Begin_timestamp, na.rm=T)
@@ -208,7 +255,7 @@ plot.all <-function(df, period=10)
 	p.rankdesity <- ggplot(data=df.interest, aes(x=factor(ORG.PID))) +
 	     geom_histogram( aes(y=..count..), binwidth=1 ) +  scale_y_continuous(limits=c(0,10)) + 
 		 scale_x_discrete(limits=1:100, labels=element_blank(), breaks = element_blank() )
-	grid.arrange(p.perf, p.rankdesity, ncol=1)	
+	#grid.arrange(p.perf, p.rankdesity, ncol=1)	
   }
 }
 plot.all(df)
