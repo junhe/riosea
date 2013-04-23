@@ -110,24 +110,31 @@ plot.speed <-function(df, period=10)
 	
   }
   
-  names(df.speed) = c("writeid", "time", "bandwidth", "iops")  
+  names(df.speed) = c("writeid", "time", "bandwidth", "iops") 
+  df.speed$bandwidth = df.speed$bandwidth/(1024*1024)
   nspeed = nrow(df.speed)
   df.melt = melt(data=df.speed, id=c("writeid", "time"))
-  print(df.speed)
   #print(nspeed)
   #print(nrow(df.melt))
   for ( i in 1:nspeed ) {
+    bw = as.character(df.melt[i,]$value)
+	print(bw)
     sel = c(1:i, (nspeed+1):(nspeed+i))
-	print(sel)
-	print("------=====-------")
-	print(df.melt[sel,])
-	print("------------------")
-	print(i)
-	break
-    #p <- ggplot(data=df.melt[sel,], aes()) +
-	#  geom_line(aes(x=writeid, y=value)) + scale_y_log10() + facet_grid(variable~., scale="free")
-	#print(p)
+    p <- ggplot(data=df.melt[sel,], aes()) +
+	  geom_line(aes(x=writeid, y=value)) + 	  
+	  scale_y_log10() + facet_grid(variable~., scale="free")+
+	  geom_text(data = NULL, x = 50, y = 50, label = bw ) + xlim(0, 100) + ylim(0,100)
+	print(p)
 	Sys.sleep(1)
   }
 }
 plot.speed(df)
+
+
+plot.rankdensity <- function(df)
+{
+  df = df[with(df, order(Begin_timestamp, Logical_offset)), ]
+  df$ORG.PID = as.factor(df$ORG.PID)
+  df$WriteID = row.names(df)
+  
+}
