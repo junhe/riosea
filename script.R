@@ -155,17 +155,17 @@ plot.rankdensity <- function(df, period=50)
 }
 #plot.rankdensity(df)
 
-plot.all <-function(df, period=10)
+plot.all <-function(df, period=10, jump=10, save.png=F)
 {
   df = df[with(df, order(Begin_timestamp, Logical_offset)), ]
-  df$ORG.PID = as.factor(df$ORG.PID)
-  df$WriteID = row.names(df)
+  #df$ORG.PID = as.factor(df$ORG.PID)
+
   n = nrow(df)
   
   df.speed = data.frame(t(rep(NA, 4)))
   df.speed = df.speed[-1,]
   
-  for ( i in 1:n ) {
+  for ( i in seq(1,n,by=jump)) {
     cur = i
     pre = cur - period
     if ( pre < 1 ) {
@@ -185,14 +185,14 @@ plot.all <-function(df, period=10)
 	rects = vector()
 	for ( j in 1:ninterest ) {
 		entry = df.interest[j,]
-		print(entry)
+		#print(entry)
 		# sx: segment x
 		# rx: row x
 		sx = entry$Logical_offset %% frame.length
 		sxend = entry$Logical_tail %% frame.length
 		sy = floor(entry$Logical_offset / frame.length)
 		syend = floor(entry$Logical_tail / frame.length)
-		print( c("sx, sxend, sy, syend", sx, sxend, sy, syend) )		
+		#print( c("sx, sxend, sy, syend", sx, sxend, sy, syend) )		
 
 		# the starting and ending segments
 		for ( yi in c(sy,syend) ) {
@@ -230,15 +230,13 @@ plot.all <-function(df, period=10)
 	
 	
 	
-	
-	
 	# Get bandwith and IOPS
     mymax = max(df.interest$End_timestamp, df.interest$Begin_timestamp, na.rm=T)
 	mymin = min(df.interest$End_timestamp, df.interest$Begin_timestamp, na.rm=T)
 	time = mymax - mymin
 	
     size = sum( df.interest$Length )
-	print(c("TIMEllllll", time))
+	#print(c("TIMEllllll", time))
     ops = ninterest
     bandwidth = size/(time*1024*1024)
     iops = ops/time
@@ -253,7 +251,7 @@ plot.all <-function(df, period=10)
 	                     value=c(bandwidth, iops),
 						 writeid=c(cur, cur))
 	
-	print(df.text)
+	#print(df.text)
     p.perf <- ggplot(data=df.melt, aes()) +
 	  geom_line(aes(x=writeid, y=value)) + 	 
 	  scale_y_log10()+
@@ -269,4 +267,5 @@ plot.all <-function(df, period=10)
 	grid.arrange(p.frame, p.perf, p.rankdesity, ncol=1)	
   }
 }
-plot.all(df)
+plot.all(df, period=10, jump=10)
+
