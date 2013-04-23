@@ -255,7 +255,7 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
     p.perf <- ggplot(data=df.melt, aes()) +
 	  geom_line(aes(x=writeid, y=value)) + 	 
 	  scale_y_log10()+
-	  geom_text(data=df.text, aes(x=as.numeric(writeid), y=value, label = format(value)) )+
+	  geom_text(data=df.text, aes(x=0, y=0, label = format(value)), hjust=-1, vjust=-2 )+
 	  scale_x_discrete(limits=c(1:n), labels=element_blank(), breaks = element_blank()) +# ylim(0,100)
 	  facet_grid(variable~., scale="free")
 	#print(p)
@@ -263,17 +263,15 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	# Rank density
 	p.rankdensity <- ggplot(data=df.interest, aes(x=ORG.PID)) +
 	     geom_histogram( aes(y=..count..), binwidth = 1 ) +  scale_y_continuous(limits=c(0,period+1)) + 
-		 scale_x_continuous(limits=c(1,max(df$ORG.PID)), labels=element_blank(), breaks = element_blank() ) 
-	print(c("ORGPID:", df.interest$ORG.PID))
+		 scale_x_continuous(limits=c(0,max(df$ORG.PID)), labels=NULL, breaks=NULL ) 
+	#print(c("ORGPID:", df.interest$ORG.PID))
 	
 	if ( save.png == T ) {
 		png(file=paste("C:/win7share/pngs/plfsmapplot", sprintf("%04d", cur), ".png", sep=""), width=600, height=1200)
 	}
-	#grid.arrange(p.frame, p.perf, p.rankdensity, ncol=1)	
-	grid.arrange(p.rankdensity, ncol=1)	
-	if ( length(unique(df.interest$ORG.PID)) == 1 && unique(df.interest$ORG.PID) == c(53) ) {
-		break
-	}
+	grid.arrange(p.frame, p.perf, p.rankdensity, ncol=1)	
+	#grid.arrange(p.rankdensity, ncol=1)	
+
 	if ( save.png == T ) {
 		dev.off()
 	}
