@@ -25,7 +25,7 @@ play_movie <- function(df, mypid, save.pic=F)
 		} 
 	}	
 }
-play_movie(df, 53)
+#play_movie(df, 53)
 
 
 
@@ -80,7 +80,7 @@ fill.frame <- function(df)
     print(newp)	
   }
 }
-fill.frame(df)
+#fill.frame(df)
 
 
 plot.speed <-function(df, period=10)
@@ -128,13 +128,86 @@ plot.speed <-function(df, period=10)
 	Sys.sleep(1)
   }
 }
-plot.speed(df)
+#plot.speed(df)
 
 
-plot.rankdensity <- function(df)
+plot.rankdensity <- function(df, period=50)
 {
   df = df[with(df, order(Begin_timestamp, Logical_offset)), ]
   df$ORG.PID = as.factor(df$ORG.PID)
   df$WriteID = row.names(df)
   
+  df.rank = data.frame()
+  
+  n = nrow(df)
+  for ( i in 1:n ) {
+    cur = i
+    pre = cur - period
+    if ( pre < 1 ) {
+      pre = 1
+    }
+	df.past = df[pre:cur,]
+	p <- ggplot(data=df.past, aes(x=factor(ORG.PID))) +
+	     geom_histogram( aes(y=..count..), binwidth=1 ) +  scale_y_continuous(limits=c(0,10)) + scale_x_discrete(limits=1:100)
+	print(p)
+	Sys.sleep(1)
+  }
 }
+#plot.rankdensity(df)
+
+plot.all <-function(df, period=10)
+{
+  df = df[with(df, order(Begin_timestamp, Logical_offset)), ]
+  df$ORG.PID = as.factor(df$ORG.PID)
+  df$WriteID = row.names(df)
+  n = nrow(df)
+  
+  df.speed = data.frame(t(rep(NA, 4)))
+  df.speed = df.speed[-1,]
+  
+  for ( i in 1:n ) {
+    cur = i
+    pre = cur - period
+    if ( pre < 1 ) {
+      pre = 1
+    }
+	df.interest = df[pre:cur,]
+	ninterest = nrow(df.interest)
+	
+	# Get bandwith and IOPS
+    mymax = max(df.interest$End_timestamp, df.interest$Begin_timestamp, na.rm=T)
+	mymin = min(df.interest$End_timestamp, df.interest$Begin_timestamp, na.rm=T)
+	time = mymax - mymin
+	
+    size = sum( df.interest$Length )
+	print(c("TIMEllllll", time))
+    ops = ninterest
+    bandwidth = size/(time*1024*1024)
+    iops = ops/time
+    df.speed = rbind(df.speed, c(cur, df[cur,]$End_timestamp, bandwidth, iops))
+	
+	names(df.speed) = c("writeid", "time", "bandwidth", "iops") 
+	df.melt = melt(data=df.speed, id=c("writeid", "time"))
+	
+	bandwidthstr = format(bandwidth, nsmall=2)
+	iopsstr = format(iops, nsmall=2)
+	df.text = data.frame(variable=c("bandwidth", "iops"), 
+	                     value=c(bandwidth, iops),
+						 writeid=c(cur, cur))
+	
+	print(df.text)
+    p <- ggplot(data=df.melt, aes()) +
+	  geom_line(aes(x=writeid, y=value)) + 	 
+	  scale_y_log10()+
+	  geom_text(data=df.text, aes(x=as.numeric(writeid), y=value, label = format(value)) )+
+	  scale_x_discrete(limits=c(1:n), labels=theme_blank(), breaks = theme_blank()) +# ylim(0,100)
+	  facet_grid(variable~., scale="free")
+	print(p)
+	
+	# Rank density
+	p.rankdesity <- ggplot(data=df.interest, aes(x=factor(ORG.PID))) +
+	     geom_histogram( aes(y=..count..), binwidth=1 ) +  scale_y_continuous(limits=c(0,10)) + scale_x_discrete(limits=1:100)
+		
+  }
+}
+plot.all(df)
