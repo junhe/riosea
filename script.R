@@ -196,18 +196,19 @@ plot.all <-function(df, period=10)
 						 writeid=c(cur, cur))
 	
 	print(df.text)
-    p <- ggplot(data=df.melt, aes()) +
+    p.perf <- ggplot(data=df.melt, aes()) +
 	  geom_line(aes(x=writeid, y=value)) + 	 
 	  scale_y_log10()+
 	  geom_text(data=df.text, aes(x=as.numeric(writeid), y=value, label = format(value)) )+
-	  scale_x_discrete(limits=c(1:n), labels=theme_blank(), breaks = theme_blank()) +# ylim(0,100)
+	  scale_x_discrete(limits=c(1:n), labels=element_blank(), breaks = element_blank()) +# ylim(0,100)
 	  facet_grid(variable~., scale="free")
-	print(p)
+	#print(p)
 	
 	# Rank density
 	p.rankdesity <- ggplot(data=df.interest, aes(x=factor(ORG.PID))) +
-	     geom_histogram( aes(y=..count..), binwidth=1 ) +  scale_y_continuous(limits=c(0,10)) + scale_x_discrete(limits=1:100)
-		
+	     geom_histogram( aes(y=..count..), binwidth=1 ) +  scale_y_continuous(limits=c(0,10)) + 
+		 scale_x_discrete(limits=1:100, labels=element_blank(), breaks = element_blank() )
+	grid.arrange(p.perf, p.rankdesity, ncol=1)	
   }
 }
 plot.all(df)
