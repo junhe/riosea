@@ -82,3 +82,52 @@ fill.frame <- function(df)
 }
 fill.frame(df)
 
+
+plot.speed <-function(df, period=10)
+{
+  # Sort by time, then by logical offset
+  df = df[with(df, order(Begin_timestamp, Logical_offset)), ]
+  df$ORG.PID = as.factor(df$ORG.PID)
+  df$WriteID = row.names(df)
+  
+  df.speed = data.frame(t(rep(NA, 4)))
+  df.speed = df.speed[-1,]
+  
+  
+  n = nrow(df)
+  for ( i in 1:n ) {
+    cur = i
+    pre = cur - period
+    if ( pre < 1 ) {
+      pre = 1
+    }
+    time = df[cur,]$End_timestamp - df[pre,]$Begin_timestamp
+    size = sum( df[pre:cur,"Length"])
+    ops = cur - pre + 1
+    bandwidth = size/time
+    iops = ops/time
+    df.speed = rbind(df.speed, c(cur, df[cur,]$End_timestamp, bandwidth, iops))    
+	
+  }
+  
+  names(df.speed) = c("writeid", "time", "bandwidth", "iops")  
+  nspeed = nrow(df.speed)
+  df.melt = melt(data=df.speed, id=c("writeid", "time"))
+  print(df.speed)
+  #print(nspeed)
+  #print(nrow(df.melt))
+  for ( i in 1:nspeed ) {
+    sel = c(1:i, (nspeed+1):(nspeed+i))
+	print(sel)
+	print("------=====-------")
+	print(df.melt[sel,])
+	print("------------------")
+	print(i)
+	break
+    #p <- ggplot(data=df.melt[sel,], aes()) +
+	#  geom_line(aes(x=writeid, y=value)) + scale_y_log10() + facet_grid(variable~., scale="free")
+	#print(p)
+	Sys.sleep(1)
+  }
+}
+plot.speed(df)
