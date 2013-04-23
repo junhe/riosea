@@ -261,10 +261,24 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	#print(p)
 	
 	# Rank density
-	p.rankdesity <- ggplot(data=df.interest, aes(x=factor(ORG.PID))) +
-	     geom_histogram( aes(y=..count..), binwidth=1 ) +  scale_y_continuous(limits=c(0,10)) + 
-		 scale_x_discrete(limits=1:100, labels=element_blank(), breaks = element_blank() )
-	grid.arrange(p.frame, p.perf, p.rankdesity, ncol=1)	
+	p.rankdensity <- ggplot(data=df.interest, aes(x=ORG.PID)) +
+	     geom_histogram( aes(y=..count..), binwidth = 1 ) +  scale_y_continuous(limits=c(0,period+1)) + 
+		 scale_x_continuous(limits=c(1,max(df$ORG.PID)), labels=element_blank(), breaks = element_blank() ) 
+	print(c("ORGPID:", df.interest$ORG.PID))
+	
+	if ( save.png == T ) {
+		png(file=paste("C:/win7share/pngs/plfsmapplot", sprintf("%04d", cur), ".png", sep=""), width=600, height=1200)
+	}
+	#grid.arrange(p.frame, p.perf, p.rankdensity, ncol=1)	
+	grid.arrange(p.rankdensity, ncol=1)	
+	if ( length(unique(df.interest$ORG.PID)) == 1 && unique(df.interest$ORG.PID) == c(53) ) {
+		break
+	}
+	if ( save.png == T ) {
+		dev.off()
+	}
+	
+	#break
   }
 }
 plot.all(df, period=10, jump=10)
