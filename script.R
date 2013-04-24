@@ -223,7 +223,7 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 		}
 	}
 	names(df.seg) = c("rx","rxend","ry","ryend")
-	p.frame <- ggplot(data=df.seg, aes()) + ylim(c(0, frame.length)) + xlim(c(0, frame.length))  + 
+	p.frame <- ggplot(data=df.seg, aes()) + #ylim(c(0, frame.length)) + xlim(c(0, frame.length))  + 
 			geom_segment(aes(x=rx, y=ry, xend=rxend, yend=ryend)) + rects
 	#print(p.frame)	
 	#Sys.sleep(1)
