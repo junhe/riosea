@@ -155,18 +155,21 @@ plot.rankdensity <- function(df, period=50)
 }
 #plot.rankdensity(df)
 
-plot.all <-function(df, period=10, jump=10, save.png=F)
+plot.all <-function(df, period, jump)
 {
   require(ggplot2)
   require(reshape)
   require(gridExtra)
+  
+  
   df = df[with(df, order(Begin_timestamp, Logical_offset)), ]
   #df$ORG.PID = as.factor(df$ORG.PID)
-
+  #df = df[1:100,]
   n = nrow(df)
   
   df.speed = data.frame(t(rep(NA, 4)))
   df.speed = df.speed[-1,]
+  
   
   for ( i in seq(1,n,by=jump)) {
     cur = i
@@ -270,19 +273,27 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	     geom_histogram( aes(y=..count..), binwidth = 1 ) +  scale_y_continuous("Count", limits=c(0,period+1)) + 
 		 scale_x_continuous("RANK", limits=c(0,max(df$ORG.PID)), labels=NULL, breaks=NULL )
 	#print(c("ORGPID:", df.interest$ORG.PID))
+	#print(p.rankdensity)
 	
-	if ( save.png == T ) {
-		png(file=paste("appiomaptimesort", sprintf("%04d", cur), ".png", sep=""), width=600, height=1200)
-	}
 	grid.arrange(p.frame, p.perf, p.rankdensity, ncol=1)	
 	#grid.arrange(p.rankdensity, ncol=1)	
 
-	if ( save.png == T ) {
-		dev.off()
-	}
+
 	
 	#break
   }
+  
 }
-plot.all(df, period=10, jump=1, save.png=T)
-
+# plot.all(df, period=10, jump=1, save.png=F)
+plotmap <- function(df, period=10, jump=10, save.file=F)
+{
+	if ( save.file == T ) {
+		require(animation)
+		saveHTML( {
+			plot.all(df, period=10, jump=1)
+		}, interval = 0.2, movie.name = "ggplot2-pppplfs-motion.gif", ani.width = 600, ani.height = 1200)
+	} else {
+		plot.all(df, period, jump)
+	}
+}
+plotmap(df, save.file=T)
