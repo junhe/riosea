@@ -216,7 +216,7 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 			p.middle = geom_rect(data=NULL, xmin = 0, xmax = frame.length, ymin = sy+1, ymax = syend-1)
 			rects = append(rects, p.middle)
 		} else {
-			p.middle = NULL
+			rects = append(rects, geom_blank())
 		}
 	}
 	names(df.seg) = c("rx","rxend","ry","ryend")
@@ -279,5 +279,5 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	#break
   }
 }
-plot.all(df, period=10, jump=10)
+plot.all(df, period=100, jump=100)
 
