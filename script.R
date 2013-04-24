@@ -157,6 +157,9 @@ plot.rankdensity <- function(df, period=50)
 
 plot.all <-function(df, period=10, jump=10, save.png=F)
 {
+  require(ggplot2)
+  require(reshape)
+  require(gridExtra)
   df = df[with(df, order(Begin_timestamp, Logical_offset)), ]
   #df$ORG.PID = as.factor(df$ORG.PID)
 
@@ -267,7 +270,7 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	#print(c("ORGPID:", df.interest$ORG.PID))
 	
 	if ( save.png == T ) {
-		png(file=paste("C:/win7share/pngs/plfsmapplot", sprintf("%04d", cur), ".png", sep=""), width=600, height=1200)
+		png(file=paste("appioplot", sprintf("%04d", cur), ".png", sep=""), width=600, height=1200)
 	}
 	grid.arrange(p.frame, p.perf, p.rankdensity, ncol=1)	
 	#grid.arrange(p.rankdensity, ncol=1)	
@@ -279,5 +282,5 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	#break
   }
 }
-plot.all(df, period=100, jump=100)
+plot.all(df, period=10, jump=10, save.png=F)
 
