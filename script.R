@@ -285,15 +285,16 @@ plot.all <-function(df, period, jump)
   
 }
 # plot.all(df, period=10, jump=1, save.png=F)
-plotmap <- function(df, period=10, jump=10, save.file=F)
+plotmap <- function(df, period=10, jump=10, save.file=F, filename="ggplot2-motion.gif")
 {
 	if ( save.file == T ) {
 		require(animation)
 		saveHTML( {
-			plot.all(df, period=10, jump=1)
-		}, interval = 0.2, movie.name = "ggplot2-pppplfs-motion.gif", ani.width = 600, ani.height = 1200)
+			plot.all(df, period, jump)
+		}, interval = 0.2, movie.name = filename, ani.width = 600, ani.height = 1200, outdir = getwd())
 	} else {
 		plot.all(df, period, jump)
 	}
 }
-plotmap(df, save.file=T)
+plotmap(df[1:10000,], period=100, jump=100, save.file=T)
+
