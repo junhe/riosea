@@ -224,7 +224,8 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	}
 	names(df.seg) = c("rx","rxend","ry","ryend")
 	p.frame <- ggplot(data=df.seg, aes()) + #ylim(c(0, frame.length)) + xlim(c(0, frame.length))  + 
-			geom_segment(aes(x=rx, y=ry, xend=rxend, yend=ryend)) + rects
+			geom_segment(aes(x=rx, y=ry, xend=rxend, yend=ryend)) + rects +
+			xlab("") + ylab("")
 	#print(p.frame)	
 	#Sys.sleep(1)
 	
@@ -259,18 +260,19 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	  geom_line(aes(x=writeid, y=value)) + 	 
 	  scale_y_log10()+
 	  geom_text(data=df.text, aes(x=0, y=0, label = format(value)), hjust=-1, vjust=-2 )+
-	  scale_x_discrete(limits=c(1:n), labels=element_blank(), breaks = element_blank()) +# ylim(0,100)
-	  facet_grid(variable~., scale="free")
+	  scale_x_discrete("Write ID", limits=c(1:n), labels=element_blank(), breaks = element_blank()) +# ylim(0,100)
+	  facet_grid(variable~., scale="free") +
+	  ylab("   IOPS         : Bandwidth(MB/s)")
 	#print(p)
 	
 	# Rank density
 	p.rankdensity <- ggplot(data=df.interest, aes(x=ORG.PID)) +
-	     geom_histogram( aes(y=..count..), binwidth = 1 ) +  scale_y_continuous(limits=c(0,period+1)) + 
-		 scale_x_continuous(limits=c(0,max(df$ORG.PID)), labels=NULL, breaks=NULL ) 
+	     geom_histogram( aes(y=..count..), binwidth = 1 ) +  scale_y_continuous("Count", limits=c(0,period+1)) + 
+		 scale_x_continuous("RANK", limits=c(0,max(df$ORG.PID)), labels=NULL, breaks=NULL )
 	#print(c("ORGPID:", df.interest$ORG.PID))
 	
 	if ( save.png == T ) {
-		png(file=paste("appioplot", sprintf("%04d", cur), ".png", sep=""), width=600, height=1200)
+		png(file=paste("appiomaptimesort", sprintf("%04d", cur), ".png", sep=""), width=600, height=1200)
 	}
 	grid.arrange(p.frame, p.perf, p.rankdensity, ncol=1)	
 	#grid.arrange(p.rankdensity, ncol=1)	
@@ -282,5 +284,5 @@ plot.all <-function(df, period=10, jump=10, save.png=F)
 	#break
   }
 }
-plot.all(df, period=10, jump=10, save.png=F)
+plot.all(df, period=10, jump=1, save.png=T)
 
