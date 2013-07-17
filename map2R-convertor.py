@@ -9,7 +9,7 @@ import sys
 def main():
     f = open(sys.argv[1], "r")
 
-    print "PID io Logical_offset Length Begin_timestamp End_timestamp  Logical_tail ID Chunk_offset"
+    print "PID IO Logical_offset Length Begin_timestamp End_timestamp  Logical_tail ORG.PID Chunk_offset"
     for line in f:
         if " w " in line:
             line = line.replace("[", "")
