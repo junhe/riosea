@@ -151,13 +151,15 @@ map_stat <- function(df)
 	#print(summary(as.factor(df$Length)))
 	
 	phist_len = ggplot(df, aes(Length)) +
-			geom_histogram(aes(y  =  ..count..), binwidth  =  1024)
+			geom_histogram(aes(y  =  ..count..), binwidth  =  1024) +
+			ggtitle("Overall Length histogram")
 	windows()
 	print(phist_len)
 	
 	
 	phist_duration = ggplot(df, aes(duration)) +
-			geom_histogram(aes(y  =  ..count..))
+			geom_histogram(aes(y  =  ..count..)) + 
+			ggtitle("Overall duration histogram")
 	windows()
 	print(phist_duration)
 	
@@ -178,13 +180,15 @@ map_stat <- function(df)
 	df.pid = subset(df, ORG.PID == 3)
 	df.pid = find_hole(df.pid)
 	phole_pid = ggplot(df.pid, aes(x=Logical_offset, y=prefix_hole)) +
-			geom_point()
+			geom_point() + ggtitle("From local data")
 	windows()
 	print(phole_pid)
+	
+	print("Length summary of a PID")
 	print(summary(as.factor(df.pid$Length)))
 	
 	plength_pid = ggplot(df.pid, aes(x=Logical_offset, y=Length)) +
-			geom_point()
+			geom_point() + ggtitle("From local data")
 	windows()
 	print(plength_pid)	
 	
