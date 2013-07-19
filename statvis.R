@@ -1,3 +1,36 @@
+# data frame list
+# df.btio = rdmine()
+# df.chombo = rdmine()
+# df.flash64 = rdmine()
+# df.lanlapp.1 = rdmine()
+# df.lanlapp2.appio = rdmine()
+# df.lanlapp2.col = rdmine()
+# df.lanlapp2.ind = rdmine()
+# df.lanlapp3.50000 = rdmine()
+# df.fstest64 = rdmine()
+# df.flash64.hdf5.chk = rdmine()
+# df.flash64.hdf5.cnt = rdmine()
+# df.flash64.hdf5.crn = rdmine()
+
+create_list <- function ()
+{
+	mylist <- list()
+	mylist[[1]] = df.btio 
+	mylist[[2]] = df.chombo 
+	mylist[[3]] = df.flash64 
+	mylist[[4]] = df.lanlapp.1 
+	mylist[[5]] = df.lanlapp2.appio 
+	mylist[[6]] = df.lanlapp2.col 
+	mylist[[7]] = df.lanlapp2.ind 
+	mylist[[8]] = df.lanlapp3.50000 
+	mylist[[9]] = df.fstest64 
+	mylist[[10]] = df.flash64.hdf5.chk 
+	mylist[[11]] = df.flash64.hdf5.cnt 
+	mylist[[12]] = df.flash64.hdf5.crn 
+	mylist
+}
+
+
 plot_gantt_plfs_fileview <- function (df)
 {
 	df$ORG.PID = as.factor(df$ORG.PID)
@@ -105,7 +138,11 @@ map_stat <- function(df)
 	print( paste(overallbw/(1024*1024), "MB/s") )
 	
 	print("Total number of writes (may not be accurate due to merging before tracing)")
-	print(nrow(df))
+	nwrites = nrow(df)
+	print(nwrites)
+	
+	print("index size (48 bytes per entry)")
+	print(paste(nwrites*48/(1024*1024), " MB"))
 	
 	print("Length summary 1")
 	print(summary(df$Length))
@@ -138,12 +175,13 @@ map_stat <- function(df)
 	print(phist_iops)
 	
 	# plot holes of a single pid
-	df.pid = subset(df, ORG.PID == 1)
+	df.pid = subset(df, ORG.PID == 3)
 	df.pid = find_hole(df.pid)
 	phole_pid = ggplot(df.pid, aes(x=Logical_offset, y=prefix_hole)) +
 			geom_point()
 	windows()
 	print(phole_pid)
+	print(summary(as.factor(df.pid$Length)))
 	
 	plength_pid = ggplot(df.pid, aes(x=Logical_offset, y=Length)) +
 			geom_point()
@@ -162,6 +200,9 @@ map_stat <- function(df)
 
 find_hole <- function(map)
 {
+	# sort by logical offset
+	map = arrange(map, Logical_offset)
+
 	tail_len = length(map$Logical_tail)
 	map$pre_tail = c(map$Logical_offset[1], map$Logical_tail[1:tail_len-1]+1) 
 	map$prefix_hole = map$Logical_offset - map$pre_tail
@@ -196,6 +237,46 @@ mark_contiguous_seg <- function(df)
 	df
 }
 
+##############################################################################
+############# merge local(per process) contiguous
+##############################################################################
+
+# the pid has to be the same
+merge_contiguous_withinpid <- function(df)
+{
+
+	tail_len = length(df$Logical_tail)
+	df$pre_tail = c(df$Logical_offset[1], df$Logical_tail[1:tail_len-1]+1) 
+	df$prefix_hole = df$Logical_offset - df$pre_tail
+
+	# mark all segment-start entry
+	df$segstart = (df$prefix_hole != 0)
+	df$segstart[1] = TRUE # this first one is always a start
+	
+	df$segend = c(df$segstart[-1], TRUE) # the last one is always an end
+	
+	starts = subset(df, segstart == TRUE)
+	ends = subset(df, segend == TRUE)
+	
+	starts$Length = ends$Logical_offset + ends$Length - starts$Logical_offset
+	starts$End_timestamp = ends$End_timestamp
+	starts$Logical_tail = starts$Logical_offset + starts$Length - 1
+	
+	starts
+}
+
+merge_local_contig <- function(df)
+{
+	ddply(df, .(ORG.PID), merge_contiguous_withinpid)
+}
+
+
+
+
+
+
+
+
 # all rows in df should have the same seg number
 shrink_contiguous_seg <- function(df)
 {
@@ -208,7 +289,7 @@ shrink_contiguous_seg <- function(df)
 		first$Length = sum(as.numeric(df$Length))
 		first$End_timestamp = last$End_timestamp
 		first$Logical_tail = last$Logical_tail
-		first$Chunk_offset = NA
+		#first$Chunk_offset = NA
 		first
 	}
 }
