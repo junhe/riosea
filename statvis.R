@@ -14,8 +14,21 @@
 
 create_list <- function ()
 {
+	attr(df.btio, "dfname") = "df.btio"
+	attr(df.chombo, "dfname") = "df.chombo"
+	attr(df.flash64 , "dfname") = "df.flash64"
+	attr(df.lanlapp.1 , "dfname") = "df.lanlapp.1"
+	attr(df.lanlapp2.appio , "dfname") = "df.lanlapp2.appio"
+	attr(df.lanlapp2.col , "dfname") = "df.lanlapp2.col"
+	attr(df.lanlapp2.ind, "dfname") = "df.lanlapp2.ind"
+	attr(df.lanlapp3.50000 , "dfname") = "df.lanlapp3.50000"
+	attr(df.fstest64, "dfname") = "df.fstest64"
+	attr(df.flash64.hdf5.chk , "dfname") = "df.flash64.hdf5.chk"
+	attr(df.flash64.hdf5.cnt, "dfname") = "df.flash64.hdf5.cnt"
+	attr(df.flash64.hdf5.crn , "dfname") = "df.flash64.hdf5.crn"
+	
 	mylist <- list()
-	mylist[[1]] = df.btio 
+	mylist[[1]] = df.btio
 	mylist[[2]] = df.chombo 
 	mylist[[3]] = df.flash64 
 	mylist[[4]] = df.lanlapp.1 
@@ -28,6 +41,30 @@ create_list <- function ()
 	mylist[[11]] = df.flash64.hdf5.cnt 
 	mylist[[12]] = df.flash64.hdf5.crn 
 	mylist
+}
+
+foreach_list <-function(mylist, FUN)
+{
+
+dfnames = c("df.btio",
+			"df.chombo",
+			"df.flash64",
+			"df.lanlapp.1",
+			"df.lanlapp2.appio",
+			"df.lanlapp2.col",
+			"df.lanlapp2.ind",
+			"df.lanlapp3.50000",
+			"df.fstest64",
+			"df.flash64.hdf5.chk",
+			"df.flash64.hdf5.cnt",
+			"df.flash64.hdf5.crn")
+
+	for(i in seq(1,12)) {
+		print(attr(mylist[[i]], "dfname"))
+		FUN(mylist[[i]])
+		readline()
+	}
+	
 }
 
 
@@ -152,14 +189,14 @@ map_stat <- function(df)
 	
 	phist_len = ggplot(df, aes(Length)) +
 			geom_histogram(aes(y  =  ..count..), binwidth  =  1024) +
-			ggtitle("Overall Length histogram")
+			ggtitle("Overall Length histogram from global data")
 	windows()
 	print(phist_len)
 	
 	
 	phist_duration = ggplot(df, aes(duration)) +
 			geom_histogram(aes(y  =  ..count..)) + 
-			ggtitle("Overall duration histogram")
+			ggtitle("Overall duration histogram from global data")
 	windows()
 	print(phist_duration)
 	
@@ -172,14 +209,33 @@ map_stat <- function(df)
 	
 	# IOPS histogram (op issue rate)
 	phist_iops = ggplot(df, aes(Begin_timestamp)) +
-			geom_histogram(aes(y  =  ..count..), binwidth  =  1.0) + ylab("Number of IO ops issued")
+			geom_histogram(aes(y  =  ..count..), binwidth  =  1.0) + ylab("Number of IO ops issued") + 
+			ggtitle("from global data")
 	windows()
 	print(phist_iops)
+	
+	# Length vs logical offset globally
+	plength_global = ggplot(df, aes(x=Logical_offset, y=Length, color=factor(Length))) +
+			geom_point() + ggtitle("From global data")
+	windows()
+	print(plength_global)	
+	
+	# prefix_hole vs logical offset globally
+	phole_global = ggplot(df, aes(x=Logical_offset, y=prefix_hole, color=factor(prefix_hole))) +
+			geom_point() + ggtitle("From global data")
+	windows()
+	print(phole_global)
+	
+	
+	########################################################
+	# Do it locally
+	########################################################
+		
 	
 	# plot holes of a single pid
 	df.pid = subset(df, ORG.PID == 3)
 	df.pid = find_hole(df.pid)
-	phole_pid = ggplot(df.pid, aes(x=Logical_offset, y=prefix_hole)) +
+	phole_pid = ggplot(df.pid, aes(x=Logical_offset, y=prefix_hole, color=factor(prefix_hole))) +
 			geom_point() + ggtitle("From local data")
 	windows()
 	print(phole_pid)
@@ -187,7 +243,7 @@ map_stat <- function(df)
 	print("Length summary of a PID")
 	print(summary(as.factor(df.pid$Length)))
 	
-	plength_pid = ggplot(df.pid, aes(x=Logical_offset, y=Length)) +
+	plength_pid = ggplot(df.pid, aes(x=Logical_offset, y=Length, color=factor(Length))) +
 			geom_point() + ggtitle("From local data")
 	windows()
 	print(plength_pid)	
@@ -306,12 +362,147 @@ merge_contiguous <- function(df)
 }
 
 
+############################################
+
+find_backjump <- function(df)
+{
+	df = arrange(df, Begin_timestamp)
+	df$post_off = c( df$Logical_offset[-1], tail(df$Logical_offset, n=1) )
+	df$strides = df$post_off - df$Logical_offset
+	nbackjmps = sum(df$strides < 0)
+	
+	
+	ret = data.frame( rbind( c(df$ORG.PID[1], nrow(df), nbackjmps) ))
+	#print (ret)
+	names(ret) = c("ORG.PID", "TotalEntries", "nBackJumps")
+	#head(df)
+	ret
+}
+
+ddply_find_backjump <- function(df)
+{
+	cnts = ddply(df, .(ORG.PID), find_backjump)
+	#print ("Number of local backward jumps")
+	#names(cnts) = c("ORG.PID","Backjump")
+	print ( paste(attr(df, "dfname"), "  Total:", 
+	        sum(cnts$TotalEntries), "  Backjumps", 
+			sum(cnts$nBackJumps) ) )
+}
 
 
+find_sortandmerge_size <- function(df)
+{
+	df = arrange(df, Begin_timestamp)
+	cnt = length(df$Logical_tail)
+	df$pre_tail = c(-1, df$Logical_tail[1:cnt-1]+1) 
+	df$prefix_hole = df$Logical_offset - df$pre_tail
+	
+	# if the prefix_hole is 0, then we can reduce one entry
+	size_sortbytime = cnt - sum( df$prefix_hole==0 )
+	
+	#print (head(df))
+	df = arrange(df, Logical_offset)
+	cnt = length(df$Logical_tail)
+	df$pre_tail = c(-1, df$Logical_tail[1:cnt-1]+1) 
+	df$prefix_hole = df$Logical_offset - df$pre_tail
+	
+	# if the prefix_hole is 0, then we can reduce one entry
+	size_sortbyoffset = cnt - sum( df$prefix_hole==0 )
+	
+	ret = c(df$ORG.PID[1], cnt, size_sortbytime, 
+	        size_sortbyoffset, size_sortbytime-size_sortbyoffset)
+	ret = data.frame( rbind(ret) )
+	names(ret) = c("ORG.PID", "OldSize", "size_sortbytime", "size_sortbyoffset", "sortbyoffset_reduce")
+	ret
+}
+
+ddply_find_sortandmerge_size <- function(df)
+{
+	cnts = ddply(df, .(ORG.PID), find_sortandmerge_size)
+	total_reduction = sum( cnts$sortbyoffset_reduce )
+	print (paste("Total reduction for this app: ",total_reduction, " etnries or ", 
+				total_reduction*48, " bytes"))
+	#print (cnts)
+	#cnts
+	appcnt = c( sum(cnts$OldSize), sum(cnts$size_sortbytime), sum(cnts$size_sortbyoffset) )
+	appcnt = data.frame( rbind(appcnt) )
+	names(appcnt) = c("OldSize", "size_sortandmerge_bytime", "size_sortandmerge_byoffset")
+	appcnt$dfname = attr(df, "dfname")
+	appcnt
+}
+
+plot_sortandmerge_size <- function(mylist)
+{
+	mydf = NULL
+	for(i in seq(1,12)) {		
+		myrow = ddply_find_sortandmerge_size(mylist[[i]])
+		mydf = rbind(mydf, myrow)
+	}
+	names(mydf) = c("OldSize", "size_sortandmerge_bytime", "size_sortandmerge_byoffset", "dfname")
+	print (mydf)
+	tmp2 = melt(mydf, id=c("dfname"), measure=c("OldSize", "size_sortandmerge_bytime", "size_sortandmerge_byoffset"))
+	
+	tmp2$kbsize = floor(tmp2$value*48/1024)
+	print((tmp2))
+	
+	p = ggplot(tmp2, aes(x=factor(variable), y=kbsize)) +
+		geom_bar(aes(fill=factor(variable)), stat="identity") +
+		#geom_point()+
+		geom_text(aes(label=kbsize, y=kbsize+5000), color="red") +
+		ylab("Size (KB)") + xlab("Operation") +
+		scale_x_discrete(labels=c("No Op", "Sort by time then merge", "Sort by offset then merge"))+
+		facet_wrap(~dfname, nrow=3) +
+		opts(axis.text.x=theme_text(angle=45, hjust=1))
+	print (p)
+}
 
 
-
-
+data_hole_fileview <- function(df)
+{
+	df = ddply(df, .(ORG.PID), find_hole)
+	df.1 = df[,c("Logical_offset", "Length", "ORG.PID", "prefix_hole")]
+	
+	#sort it by starting offset
+	# order PID by the first logical offset
+	df.hds = ddply(df.1, .(ORG.PID), function(x) head(x,1))
+	df.hds = arrange(df.hds, Logical_offset)
+	#orderedPid = factor(df.hds$ORG.PID, levels = df.hds$ORG.PID)
+	orderedPid = df.hds$ORG.PID
+	
+	
+	
+	# reorder the ORG.PID levels
+	df.1$ORG.PID = factor(df.1$ORG.PID, levels = orderedPid)
+	
+	
+	
+	df.2 = df.1
+	df.2 = within(df.2, {Logical_offset = Logical_offset - prefix_hole
+				  Length = prefix_hole
+				 })
+	df.1$type = "data"
+	df.2$type = "hole"
+	df.3 = rbind(df.1, df.2)
+	df.3$prefix_hole = NULL
+	df.3$type = interaction(df.3$type, df.3$ORG.PID,  drop=T)
+	#print (df.3$type)
+	
+	# reorder level
+	orderedPid = rep(orderedPid, each=2)
+	types = rep( c("data", "hole"), length(orderedPid)/2 )
+	pidorder = paste(types, orderedPid, sep=".")
+	df.3$type = factor(df.3$type, levels=pidorder)
+	newlevels = sample(as.character(levels(factor(df.3$Length))))
+	df.3$refactoredLen = factor(df.3$Length, levels=newlevels)
+	
+	
+	p <- ggplot(df.3, aes()) +
+			geom_segment(aes(x=Logical_offset, xend=Logical_offset+Length, y=factor(type), yend=factor(type), color=factor(refactoredLen)), size=10) +
+			geom_text(aes(x=Logical_offset, y=factor(type), label=factor(Length)), size=1, color="black") +
+			xlab("Logical Offset") + ylab("Type") +
+			xlim(1e9,3e9)
+	print(p)	
+}
 
 
 
