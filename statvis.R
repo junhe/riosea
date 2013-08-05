@@ -498,13 +498,172 @@ data_hole_fileview <- function(df)
 	
 	p <- ggplot(df.3, aes()) +
 			geom_segment(aes(x=Logical_offset, xend=Logical_offset+Length, y=factor(type), yend=factor(type), color=factor(refactoredLen)), size=10) +
-			geom_text(aes(x=Logical_offset, y=factor(type), label=factor(Length)), size=1, color="black") +
-			xlab("Logical Offset") + ylab("Type") +
-			xlim(1e9,3e9)
+			geom_text(aes(x=Logical_offset, y=factor(type), label=Logical_offset), size=1, color="black") +
+			xlab("Logical Offset") + ylab("Type") 
+			#xlim(1e9,3e9)
 	print(p)	
 }
 
+##########################################
+##########################################
+##########################################
+##########################################
+
+generate_trace_bypattern <- function()
+{
+    # For LANL2.col
+#   base = 26336 # where (offset) this pattern strats
+#	segsize = 500032+63512000 # size of the largest segment shared by all processes
+#	nseg = 70
+#	len = 500094 # length of each write, in this version, all lengths are identical
+#	np = 128
 
 
+
+	# iterators: pid and seg_i(which segment it is)
+	# i want: $offset $length $pid
+	
+	# generate on pid by one pid
+	df.t = NULL
+	for ( pid in seq(0, np-1) ) {
+		firstbyte = base+pid*len
+		offs = seq(firstbyte, by=segsize, length.out=nseg)
+		mydf = data.frame(Logical_offset=offs, Length=len, ORG.PID=pid)
+		df.t = rbind(df.t, mydf)
+	}
+#print(df.t)	
+    df.t
+}
+
+# given a chunk of data, figure out how much data
+# needs to be moved to its destination
+get_movement_size <- function(off, len, pid, df.dest)
+{
+	bytes_rem = len
+	trans = NULL #  FROM TO OFFSET SIZE
+	
+	while ( bytes_rem > 0 ) {
+		cur_off = off + len - bytes_rem	
+		cur_len = bytes_rem
+#print( paste("current: ", cur_off, ", ", cur_len, ", ", pid) )
+		# find the offset
+		lower_range = which(df.dest$Logical_offset <= cur_off)
+		if ( length(lower_range) == 0 ) {
+			stop("something wrong! You have to find every picec of data")
+		}
+#print ("lower_range")
+#print (lower_range)
+		# Let me call the picec of data that might has cur_off, cur_len a chunk
+		chunk_index = max(lower_range)
+		chunk_off = df.dest$Logical_offset[chunk_index]
+		chunk_len = df.dest$Length[chunk_index]
+		chunk_pid = df.dest$ORG.PID[chunk_index]
+#print( paste("chunk:", chunk_off, ", ", chunk_len, ", ", chunk_pid) )
+		
+		if ( cur_off > chunk_off+chunk_len ) {
+
+			stop("shouldn't happen.")
+		}
+		
+		bytes_move = 0
+		if ( cur_off + cur_len <= chunk_off + chunk_len ) {
+			# all included in this chunk
+			bytes_rem = 0
+			bytes_move = cur_len
+		} else {
+			# some of cur's bytes are beyond chunk			
+			bytes_rem = (cur_off + cur_len) - (chunk_off + chunk_len)
+			bytes_move = (chunk_off + chunk_len) - cur_off
+		}
+		
+		if ( pid != chunk_pid ) {
+			myv = c(pid, chunk_pid, cur_off, bytes_move)
+			trans = rbind(data.frame(trans), rbind(myv))
+#print(paste("have to move"))
+#print(trans)
+		} else {
+#print (paste(pid,"no need to move") )
+        }
+#print( paste( "bytes_rem:", bytes_rem ))
+#stop("SSSSSSSSSSSSS")
+	}
+#print("nrow(trans):", nrow(trans))
+    if ( !is.null(trans)  ) {
+        names(trans) = c("FROM", "TO", "OFFSET", "SIZE")
+    }
+	trans
+}
+
+get_movement_size_wrapper <- function(df, df.dest)
+{
+    if ( nrow(df) != 1 ) {
+        stop("error in get_movement_size_wrapper")
+    }
+#print("in wrapper")
+#print(df)
+    get_movement_size(df$Logical_offset, df$Length, df$ORG.PID, df.dest)
+}
+
+ddply_replace_pid <- function(df.org, df.generated)
+{
+	df.org = arrange(df.org, Logical_offset)
+	orderpid = unique(df.org$ORG.PID)
+    #print (orderpid)
+
+    df.ordered = ddply(df.generated, .(ORG.PID), replace_pid, pidorder=orderpid)
+    df.ordered
+
+}
+
+# df is a group with same pid number
+replace_pid <- function(df, pidorder)
+{
+	n = nrow(df)
+    oldpid = df$ORG.PID[1]
+    newpid = pidorder[oldpid+1]
+    df$ORG.PID = rep(newpid, n)
+    #print(paste("oldpid:", oldpid, "newpid:", newpid))
+    df
+}
+
+move_main <- function()
+{
+    df.wanted = generate_trace_bypattern();
+    df.wanted = ddply_replace_pid(df.lanlapp2.col, df.wanted)
+    df.wanted = arrange(df.wanted, Logical_offset)
+    print(head(df.wanted))
+    # trim the df we have a little bit, it might be wider than wanted
+    df.org = head(subset(merge_local_contig(df.lanlapp2.col), 
+            Logical_offset >= 26336 & Logical_offset < 4360473568), n=100000)
+    print(head(df.org)) 
+
+
+
+#stop("stop")
+    moves = ddply(df.org, .(Logical_offset), 
+            get_movement_size_wrapper, df.dest = df.wanted)
+    #print((moves))
+
+    nmoves = nrow(moves)
+    szofmoves = sum(moves$SIZE)
+    totalsz = sum( as.numeric(df.org$Length) )
+    print( data.frame(nmoves, szofmoves, totalsz) )
+    
+    moves
+}
+
+plot_movement <- function(df)
+{
+    df = arrange(df, OFFSET)
+    orderFROM = unique(df$FROM)
+    df$FROM = factor(df$FROM, levels=orderFROM)
+    randomTO = sample(unique(df$TO))
+    df$TO = factor(df$TO, levels=randomTO)
+    p = ggplot(df, aes()) +
+            geom_segment(aes(x=OFFSET, xend=OFFSET+SIZE, 
+                             y=FROM, yend=FROM,
+                             color=factor(TO)), size=3)
+    print(p)
+}
 
 
